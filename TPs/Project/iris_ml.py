@@ -1,52 +1,39 @@
 import pyspark
-from pyspark import SparkContext
-from pyspark.sql import Row
-from pyspark.sql import SQLContext
-from pyspark import SparkFiles
-import os
-import pandas as pd
+from pyspark import SparkConf,      \
+                    SparkContext,   \
+                    SparkFiles
+from pyspark.sql import SQLContext, Row
+from pandas import read_csv
 
-"""----------------------------------------------------------------------------
-CREATE SPARK CONTEXT
-CREATE SQL CONTEXT
-----------------------------------------------------------------------------"""
-sc =SparkContext()
-sqlContext = SQLContext(sc)
+# App Environment
+MASTER_URL  = "spark://front-in1.cemef:7077"
+APP_NAME    = "IRIS-ML"
+DATA_DIR    = "/gext/rami.kader/hpcai/HPDA/\
+                BigDataHadoopSparkDaskCourse/\
+                TPs/Project/iris.csv"
 
-"""----------------------------------------------------------------------------
-LOAD IRIS DATA
-----------------------------------------------------------------------------"""
-data_dir="/gext/jean-marc.gratien/BigDataHadoopSpark/TPs/data"
-file = os.path.join(data_dir,"iris.csv")
-panda_df = pd.read_csv(file)
+# Spark Context & Conf
+conf        = SparkConf().setMaster(MASTER_URL).setAppName(APP_NAME)
+sc          = SparkContext(conf=conf)
+sqlContext  = SQLContext(sc)
 
-iris_df=sqlContext.createDataFrame(panda_df)
+# Data Setup
+iris_df     = sqlContext.createDataFrame(pandas.read_csv(data_dir))
 iris_df.printSchema()
 
-#Add a numeric indexer for the label/target column
+# Add a numeric indexer for the label/target column
 from pyspark.ml.feature import StringIndexer
-stringIndexer = StringIndexer(inputCol="variety", outputCol="ind_variety")
-si_model = stringIndexer.fit(iris_df)
-irisNormDf = si_model.transform(iris_df)
+stringIndexer   = StringIndexer(inputCol="variety", outputCol="ind_variety")
+si_model        = stringIndexer.fit(iris_df)
+irisNormDf      = si_model.transform(iris_df)
 irisNormDf.printSchema()
-irisNormDf.select("variety","ind_variety").distinct().collect()
-#irisNormDf.cache()
+irisNormDf.select("variety", "ind_variety").distinct().collect()
 
-"""--------------------------------------------------------------------------
-Perform Data Analytics
--------------------------------------------------------------------------"""
+# Perform Data Analytics
+irisNormDf.describe().show()
 
-#See standard parameters
-#irisNormDf.describe().show()
-
-
-"""--------------------------------------------------------------------------
-Prepare data for ML
--------------------------------------------------------------------------"""
-
-#Transform to a Data Frame for input to Machine Learing
-#Drop columns that are not required (low correlation)
-
+# Transform to a Data Frame for input to Machine Learing
+# Drop columns that are not required (low correlation)
 from pyspark.ml.linalg import Vectors
 def transformToLabeledPoint(row) :
     lp = ( row["variety"], row["ind_variety"], \
@@ -61,11 +48,7 @@ irisLpDf = sqlContext.createDataFrame(irisLp,["species","label", "features"])
 irisLpDf.select("species","label","features").show(50)
 irisLpDf.cache()
 
-"""--------------------------------------------------------------------------
-Perform Machine Learning
--------------------------------------------------------------------------"""
-
-#Split into training and testing data
+# Split into training and testing data
 (trainingData, testData) = irisLpDf.randomSplit([0.9, 0.1])
 trainingData.count()
 testData.count()
@@ -74,7 +57,7 @@ testData.collect()
 from pyspark.ml.classification import DecisionTreeClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
-#Create the model
+# Create the model
 dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label",\
                 featuresCol="features")
 dtModel = dtClassifer.fit(trainingData)
@@ -82,15 +65,17 @@ dtModel = dtClassifer.fit(trainingData)
 print(dtModel.numNodes)
 print(dtModel.depth)
 
-#Predict on the test data
+# Predict on the test data
 predictions = dtModel.transform(testData)
 predictions.select("prediction","species","label").collect()
 
-#Evaluate accuracy
+# Evaluate accuracy
 evaluator = MulticlassClassificationEvaluator(predictionCol="prediction", \
                     labelCol="label",metricName="accuracy")
 evaluator.evaluate(predictions)    
 
-#Draw a confusion matrix
+# Draw a confusion matrix
 predictions.groupBy("label","prediction").count().show()
 
+# Closing Spark Context
+sc.stop()
