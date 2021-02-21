@@ -8,9 +8,7 @@ from pandas import read_csv
 # App Environment
 MASTER_URL  = "spark://front-in1.cemef:7077"
 APP_NAME    = "IRIS-ML"
-DATA_DIR    = "/gext/rami.kader/hpcai/HPDA/\
-                BigDataHadoopSparkDaskCourse/\
-                TPs/Project/iris.csv"
+DATA_DIR    = "/gext/rami.kader/hpcai/HPDA/BigDataHadoopSparkDaskCourse/TPs/Project/iris.csv"
 
 # Spark Context & Conf
 conf        = SparkConf().setMaster(MASTER_URL).setAppName(APP_NAME)
