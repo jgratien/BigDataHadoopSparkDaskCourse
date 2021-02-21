@@ -18,7 +18,7 @@ sc          = SparkContext(conf=conf)
 sqlContext  = SQLContext(sc)
 
 # Data Setup
-iris_df     = sqlContext.createDataFrame(pandas.read_csv(data_dir))
+iris_df     = sqlContext.createDataFrame(read_csv(data_dir))
 iris_df.printSchema()
 
 # Add a numeric indexer for the label/target column
