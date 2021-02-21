@@ -13,6 +13,7 @@ DATA_DIR    = "/gext/rami.kader/hpcai/HPDA/BigDataHadoopSparkDaskCourse/TPs/Proj
 # Spark Context & Conf
 conf        = SparkConf().setMaster(MASTER_URL).setAppName(APP_NAME)
 sc          = SparkContext(conf=conf)
+sc.setLogLevel("ERROR")
 sqlContext  = SQLContext(sc)
 
 # Data Setup
