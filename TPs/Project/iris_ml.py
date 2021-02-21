@@ -35,12 +35,14 @@ irisNormDf.describe().show()
 # Drop columns that are not required (low correlation)
 from pyspark.ml.linalg import Vectors
 def transformToLabeledPoint(row) :
-    lp = ( row["variety"], row["ind_variety"], \
-                Vectors.dense([row["sepal_length"],\
-                        row["sepal_width"], \
-                        row["petal_length"], \
-                        row["petal_width"]]))
-    return lp
+    return (
+        row["variety"],
+        row["ind_variety"],
+        Vectors.dense([
+            row["sepal_length"],
+            row["sepal_width"],
+            row["petal_length"],
+            row["petal_width"]]))
 
 irisLp = irisNormDf.rdd.map(transformToLabeledPoint)
 irisLpDf = sqlContext.createDataFrame(irisLp,["species","label", "features"])
