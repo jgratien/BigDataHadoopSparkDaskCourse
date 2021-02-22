@@ -28,7 +28,6 @@ stringIndexer   = StringIndexer(inputCol="variety", outputCol="ind_variety")
 si_model        = stringIndexer.fit(iris_df)
 irisNormDf      = si_model.transform(iris_df)
 irisNormDf.printSchema()
-irisNormDf.select("variety", "ind_variety").distinct().collect()
 
 # Perform Data Analytics
 irisNormDf.describe().show()
@@ -47,27 +46,23 @@ def transformToLabeledPoint(row) :
 
 irisLp = irisNormDf.rdd.map(transformToLabeledPoint)
 irisLpDf = sqlContext.createDataFrame(irisLp,["species","label", "features"])
-irisLpDf.select("species","label","features").show(50)
 irisLpDf.cache()
 
 # Split into training and testing data
 (trainingData, testData) = irisLpDf.randomSplit([0.9, 0.1])
 
 # Create the model
-dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label",\
-                featuresCol="features")
+dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label", featuresCol="features")
 dtModel = dtClassifer.fit(trainingData)
-
-print(dtModel.numNodes)
-print(dtModel.depth)
 
 # Predict on the test data
 predictions = dtModel.transform(testData)
-predictions.select("prediction","species","label").collect()
 
 # Evaluate accuracy
-evaluator = MulticlassClassificationEvaluator(predictionCol="prediction", \
-                    labelCol="label",metricName="accuracy")
+evaluator = MulticlassClassificationEvaluator(
+    predictionCol="prediction",
+    labelCol="label",
+    metricName="accuracy")
 evaluator.evaluate(predictions)    
 
 # Draw a confusion matrix
