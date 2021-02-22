@@ -1,9 +1,11 @@
-import pyspark
+from pandas import read_csv
 from pyspark import SparkConf,      \
                     SparkContext,   \
                     SparkFiles
 from pyspark.sql import SQLContext, Row
-from pandas import read_csv
+from pyspark.ml.linalg import Vectors
+from pyspark.ml.classification import DecisionTreeClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 # App Environment
 MASTER_URL  = "spark://front-in1.cemef:7077"
@@ -33,7 +35,6 @@ irisNormDf.describe().show()
 
 # Transform to a Data Frame for input to Machine Learing
 # Drop columns that are not required (low correlation)
-from pyspark.ml.linalg import Vectors
 def transformToLabeledPoint(row) :
     return (
         row["variety"],
@@ -51,12 +52,6 @@ irisLpDf.cache()
 
 # Split into training and testing data
 (trainingData, testData) = irisLpDf.randomSplit([0.9, 0.1])
-trainingData.count()
-testData.count()
-testData.collect()
-
-from pyspark.ml.classification import DecisionTreeClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 # Create the model
 dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label",\
