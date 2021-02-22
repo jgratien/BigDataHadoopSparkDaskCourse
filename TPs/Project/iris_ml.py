@@ -49,7 +49,7 @@ irisLpDf = sqlContext.createDataFrame(irisLp,["species","label", "features"])
 irisLpDf.cache()
 
 # Split into training and testing data
-(trainingData, testData) = irisLpDf.randomSplit([0.9, 0.1])
+(trainingData, testData) = irisLpDf.randomSplit([0.75, 0.25])
 
 # Create the model
 dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label", featuresCol="features")
