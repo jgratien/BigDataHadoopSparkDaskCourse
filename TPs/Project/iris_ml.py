@@ -3,8 +3,12 @@ from pyspark import SparkConf,      \
                     SparkContext,   \
                     SparkFiles
 from pyspark.sql import SQLContext, Row
+from pyspark.ml import Pipeline
 from pyspark.ml.linalg import Vectors
-from pyspark.ml.classification import DecisionTreeClassifier
+from pyspark.ml.feature import StringIndexer
+from pyspark.ml.classification import DecisionTreeClassifier,   \
+                                      RandomForestClassifier,   \
+                                      GBTClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 # App Environment
@@ -13,60 +17,67 @@ APP_NAME    = "IRIS-ML"
 DATA_DIR    = "/gext/rami.kader/hpcai/HPDA/BigDataHadoopSparkDaskCourse/TPs/Project/iris.csv"
 
 # Spark Context & Conf
+print("Setting Spark Context...")
 conf        = SparkConf().setMaster(MASTER_URL).setAppName(APP_NAME)
 sc          = SparkContext(conf=conf)
 sc.setLogLevel("ERROR")
 sqlContext  = SQLContext(sc)
 
-# Data Setup
+# Data Load & Setup
+print("Loading data...")
 iris_df     = sqlContext.createDataFrame(read_csv(DATA_DIR))
-iris_df.printSchema()
-
-# Add a numeric indexer for the label/target column
-from pyspark.ml.feature import StringIndexer
-stringIndexer   = StringIndexer(inputCol="variety", outputCol="ind_variety")
-si_model        = stringIndexer.fit(iris_df)
-irisNormDf      = si_model.transform(iris_df)
-irisNormDf.printSchema()
-
-# Perform Data Analytics
-irisNormDf.describe().show()
 
 # Transform to a Data Frame for input to Machine Learing
-# Drop columns that are not required (low correlation)
-def transformToLabeledPoint(row) :
-    return (
-        row["variety"],
-        row["ind_variety"],
-        Vectors.dense([
-            row["sepal_length"],
-            row["sepal_width"],
-            row["petal_length"],
-            row["petal_width"]]))
+iris_lp = sqlContext.createDataFrame(
+    iris_df.rdd.map(
+        lambda row : (
+            row["variety"],
+            Vectors.dense([
+                row["sepal_length"],
+                row["sepal_width"],
+                row["petal_length"],
+                row["petal_width"]]))
+    ),
+    ["species", "features"])
 
-irisLp = irisNormDf.rdd.map(transformToLabeledPoint)
-irisLpDf = sqlContext.createDataFrame(irisLp,["species","label", "features"])
-irisLpDf.cache()
+# Add a numeric indexer for the label/target column
+labelIndexer = StringIndexer(inputCol="species", outputCol="label")
 
 # Split into training and testing data
-(trainingData, testData) = irisLpDf.randomSplit([0.75, 0.25])
+(trainingData, testData) = iris_lp.randomSplit([0.75, 0.25])
 
-# Create the model
-dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label", featuresCol="features")
-dtModel = dtClassifer.fit(trainingData)
+# Create the models
+dtClass     = DecisionTreeClassifier(labelCol="label", featuresCol="features", maxDepth=4)
+rfClass     = RandomForestClassifier(labelCol="label", featuresCol="features", numTrees=20)
+gbtClass    = GBTClassifier(labelCol="label", featuresCol="features", maxIter=15)
+
+# ML-Pipelines
+print("Creating training pipelines...")
+dtPipe  = Pipeline(stages=[labelIndexer, dtClass])
+rfPipe  = Pipeline(stages=[labelIndexer, rfClass])
+gbtPipe = Pipeline(stages=[labelIndexer, gbtClass])
+
+# Models objects output
+print("Fitting pipelines...")
+dtModel     = dtPipe.fit(trainingData)
+rfModel     = rfPipe.fit(trainingData)
+gbtModel    = gbtPipe.fit(trainingData)
 
 # Predict on the test data
-predictions = dtModel.transform(testData)
+print("Performing predictions...")
+dt_predictions  = dtModel.transform(testData)
+rf_predictions  = rfModel.transform(testData)
+gbt_predictions = gbtModel.transform(testData)
 
 # Evaluate accuracy
 evaluator = MulticlassClassificationEvaluator(
     predictionCol="prediction",
     labelCol="label",
     metricName="accuracy")
-evaluator.evaluate(predictions)    
-
-# Draw a confusion matrix
-predictions.groupBy("label","prediction").count().show()
+print("--- Classifiers Test Errors ---")
+print("Decision Tree: %g " % (1.0 - evaluator.evaluate(dt_predictions)))
+print("Random Forest: %g " % (1.0 - evaluator.evaluate(rf_predictions)))
+print("GBoosted Tree: %g " % (1.0 - evaluator.evaluate(gbt_predictions)))
 
 # Closing Spark Context
 sc.stop()
