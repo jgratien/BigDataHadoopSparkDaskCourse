@@ -18,7 +18,7 @@ def part_median_filter(local_data):
     ny      = buf.shape[1]
     
     # CREATE NEW BUF WITH MEDIAN FILTER SOLUTION
-    new_buf = np.array([end-first-1, ny-2], dtype='uint8')
+    new_buf = np.zeros((end-first-1, ny-2), dtype='uint8')
     
     # TODO COMPUTE MEDIAN FILTER
     for i in range(first+1, end):
