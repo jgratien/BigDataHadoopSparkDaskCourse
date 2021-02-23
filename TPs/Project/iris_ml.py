@@ -5,7 +5,9 @@ from pyspark import SparkConf,      \
 from pyspark.sql import SQLContext, Row
 from pyspark.ml import Pipeline
 from pyspark.ml.linalg import Vectors
-from pyspark.ml.feature import StringIndexer, StandardScaler
+from pyspark.ml.feature import StringIndexer,   \
+                               VectorAssembler, \
+                               StandardScaler
 from pyspark.ml.classification import DecisionTreeClassifier,   \
                                       LogisticRegression,   \
                                       NaiveBayes
@@ -27,21 +29,16 @@ sqlContext  = SQLContext(sc)
 print("Loading data...")
 iris_df     = sqlContext.createDataFrame(read_csv(DATA_DIR))
 
-# Transform to a Data Frame for input to Machine Learing
-iris_lp = sqlContext.createDataFrame(
-    iris_df.rdd.map(
-        lambda row : (
-            row["variety"],
-            Vectors.dense([
-                row["sepal_length"],
-                row["sepal_width"],
-                row["petal_length"],
-                row["petal_width"]]))
-    ),
-    ["species", "features"])
+# Add a transformer for features assembly into models supported format
+transformer = VectorAssembler(
+    inputCols=["sepal_length",
+               "sepal_width",
+               "petal_length",
+               "petal_width"],
+    outputCol="features")
 
 # Add a numeric indexer for the label/target column
-labelIndexer = StringIndexer(inputCol="species", outputCol="label")
+labellizer = StringIndexer(inputCol="variety", outputCol="label")
 
 # Add a gaussian-normalizor for features set
 scaler = StandardScaler(
@@ -50,7 +47,7 @@ scaler = StandardScaler(
     withStd=True, withMean=True)
 
 # Split into training and testing data
-(trainingData, testData) = iris_lp.randomSplit([0.75, 0.25])
+(trainingData, testData) = iris_df.randomSplit([0.75, 0.25])
 
 # Create the models
 dtClass     = DecisionTreeClassifier(
@@ -69,9 +66,9 @@ lrClass     = LogisticRegression(
 
 # ML-Pipelines
 print("Creating training pipelines...")
-dtPipe  = Pipeline(stages=[labelIndexer, scaler, dtClass])
-nvbPipe = Pipeline(stages=[labelIndexer, scaler, nvbClass])
-lrPipe  = Pipeline(stages=[labelIndexer, scaler, lrClass])
+dtPipe  = Pipeline(stages=[transformer, labellizer, scaler, dtClass])
+nvbPipe = Pipeline(stages=[transformer, labellizer, scaler, nvbClass])
+lrPipe  = Pipeline(stages=[transformer, labellizer, scaler, lrClass])
 
 # Models objects output
 print("Fitting pipelines...")
