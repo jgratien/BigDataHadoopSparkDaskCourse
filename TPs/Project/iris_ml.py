@@ -7,8 +7,8 @@ from pyspark.ml import Pipeline
 from pyspark.ml.linalg import Vectors
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.classification import DecisionTreeClassifier,   \
-                                      RandomForestClassifier,   \
-                                      GBTClassifier
+                                      LogisticRegression,   \
+                                      NaiveBayes
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 # App Environment
@@ -47,27 +47,38 @@ labelIndexer = StringIndexer(inputCol="species", outputCol="label")
 (trainingData, testData) = iris_lp.randomSplit([0.75, 0.25])
 
 # Create the models
-dtClass     = DecisionTreeClassifier(labelCol="label", featuresCol="features", maxDepth=4)
-rfClass     = RandomForestClassifier(labelCol="label", featuresCol="features", numTrees=20)
-gbtClass    = GBTClassifier(labelCol="label", featuresCol="features", maxIter=15)
+dtClass     = DecisionTreeClassifier(
+    labelCol="label",
+    featuresCol="features",
+    maxDepth=5)
+nvbClass    = NaiveBayes(
+    labelCol="label",
+    featuresCol="features",
+    smoothing=1.0,
+    modelType="multinomial")
+lrClass     = LogisticRegression(
+    labelCol="label",
+    featuresCol="features",
+    maxIter=15, regParam=0.3,
+    elasticNetParam=0.8)
 
 # ML-Pipelines
 print("Creating training pipelines...")
 dtPipe  = Pipeline(stages=[labelIndexer, dtClass])
-rfPipe  = Pipeline(stages=[labelIndexer, rfClass])
-gbtPipe = Pipeline(stages=[labelIndexer, gbtClass])
+nvbPipe = Pipeline(stages=[labelIndexer, nvbClass])
+lrPipe  = Pipeline(stages=[labelIndexer, lrClass])
 
 # Models objects output
 print("Fitting pipelines...")
 dtModel     = dtPipe.fit(trainingData)
-rfModel     = rfPipe.fit(trainingData)
-gbtModel    = gbtPipe.fit(trainingData)
+nvbModel    = nvbPipe.fit(trainingData)
+lrModel     = lrPipe.fit(trainingData)
 
 # Predict on the test data
 print("Performing predictions...")
 dt_predictions  = dtModel.transform(testData)
-rf_predictions  = rfModel.transform(testData)
-gbt_predictions = gbtModel.transform(testData)
+nvb_predictions = nvbModel.transform(testData)
+lr_predictions  = lrModel.transform(testData)
 
 # Evaluate accuracy
 evaluator = MulticlassClassificationEvaluator(
@@ -76,8 +87,8 @@ evaluator = MulticlassClassificationEvaluator(
     metricName="accuracy")
 print("--- Classifiers Test Errors ---")
 print("Decision Tree: %g " % (1.0 - evaluator.evaluate(dt_predictions)))
-print("Random Forest: %g " % (1.0 - evaluator.evaluate(rf_predictions)))
-print("GBoosted Tree: %g " % (1.0 - evaluator.evaluate(gbt_predictions)))
+print("Naive Bayes: %g " % (1.0 - evaluator.evaluate(nvb_predictions)))
+print("Logistic Regression: %g " % (1.0 - evaluator.evaluate(lr_predictions)))
 
 # Closing Spark Context
 sc.stop()
