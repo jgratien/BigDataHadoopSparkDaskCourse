@@ -39,7 +39,7 @@ def main():
     sc = SparkContext()
     sc.setLogLevel("ERROR")
 
-    data_dir = '/gext/rami.kader/hpcai/HPDA/BigDataHadoopSparkDaskCourse/TPs/data'
+    data_dir = '/gext/rami.kader/hpcai/HPDA/BigDataHadoopSparkDaskCourse/TPs/Project'
     file = os.path.join(data_dir, 'lena_noisy.jpg')
     img_buf = readImg(file)
     print('SHAPE', img_buf.shape)
