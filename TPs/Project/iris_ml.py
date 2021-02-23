@@ -29,6 +29,7 @@ sqlContext  = SQLContext(sc)
 print("Loading data...")
 iris_df     = sqlContext.createDataFrame(read_csv(DATA_DIR))
 
+print("Creating preprocessing pipeline...")
 # Add a transformer for features assembly into models supported format
 transformer = VectorAssembler(
     inputCols=["sepal_length",
@@ -36,18 +37,20 @@ transformer = VectorAssembler(
                "petal_length",
                "petal_width"],
     outputCol="features")
-
 # Add a numeric indexer for the label/target column
 labellizer = StringIndexer(inputCol="variety", outputCol="label")
-
 # Add a gaussian-normalizor for features set
 scaler = StandardScaler(
     inputCol="features",
     outputCol="scaled",
     withStd=True, withMean=True)
-
 # Split into training and testing data
-(trainingData, testData) = iris_df.randomSplit([0.75, 0.25])
+(train, test)   = iris_df.randomSplit([0.75, 0.25])
+# Full Preprocessing Pipeline
+preprocessor = Pipeline(
+    stages=[transformer,
+            labellizer,
+            scaler]).fit(train)
 
 # Create the models
 dtClass     = DecisionTreeClassifier(
@@ -65,22 +68,21 @@ lrClass     = LogisticRegression(
     maxIter=15)
 
 # ML-Pipelines
-print("Creating training pipelines...")
-dtPipe  = Pipeline(stages=[transformer, labellizer, scaler, dtClass])
-nvbPipe = Pipeline(stages=[transformer, labellizer, scaler, nvbClass])
-lrPipe  = Pipeline(stages=[transformer, labellizer, scaler, lrClass])
+print("Preprocessing data...")
+proc_train  = preprocessor.transform(train)
+proc_test   = preprocessor.transform(test)
 
 # Models objects output
-print("Fitting pipelines...")
-dtModel     = dtPipe.fit(trainingData)
-nvbModel    = nvbPipe.fit(trainingData)
-lrModel     = lrPipe.fit(trainingData)
+print("Fitting models...")
+dtModel     = dtClass.fit(proc_train)
+nvbModel    = nvbClass.fit(proc_train)
+lrModel     = lrClass.fit(proc_train)
 
 # Predict on the test data
 print("Performing predictions...")
-dt_predictions  = dtModel.transform(testData)
-nvb_predictions = nvbModel.transform(testData)
-lr_predictions  = lrModel.transform(testData)
+dt_predictions  = dtModel.transform(proc_test)
+nvb_predictions = nvbModel.transform(proc_test)
+lr_predictions  = lrModel.transform(proc_test)
 
 # Evaluate accuracy
 evaluator = MulticlassClassificationEvaluator(
