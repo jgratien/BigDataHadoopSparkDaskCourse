@@ -57,7 +57,6 @@ def main():
         end = min(begin + block_size + 1, nx - 1)
         data.append((ip, begin, end, img_buf))
         begin = end - 1
-
     
     # PARALLEL MEDIAN FILTER COMPUTATION
     data_rdd = sc.parallelize(data, nb_partitions)	
