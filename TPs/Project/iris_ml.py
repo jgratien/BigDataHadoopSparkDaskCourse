@@ -54,13 +54,12 @@ dtClass     = DecisionTreeClassifier(
 nvbClass    = NaiveBayes(
     labelCol="label",
     featuresCol="features",
-    smoothing=1.0,
-    modelType="multinomial")
+    smoothing=0.5,
+    modelType="gaussian")
 lrClass     = LogisticRegression(
     labelCol="label",
     featuresCol="features",
-    maxIter=15, regParam=0.3,
-    elasticNetParam=0.8)
+    maxIter=15)
 
 # ML-Pipelines
 print("Creating training pipelines...")
@@ -85,7 +84,7 @@ evaluator = MulticlassClassificationEvaluator(
     predictionCol="prediction",
     labelCol="label",
     metricName="accuracy")
-print("--- Classifiers Test Errors ---")
+print("\n--- Classifiers Test Errors ---")
 print("Decision Tree: %g " % (1.0 - evaluator.evaluate(dt_predictions)))
 print("Naive Bayes: %g " % (1.0 - evaluator.evaluate(nvb_predictions)))
 print("Logistic Regression: %g " % (1.0 - evaluator.evaluate(lr_predictions)))
