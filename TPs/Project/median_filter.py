@@ -52,7 +52,7 @@ def main():
     print("NB PARTITIONS : ", nb_partitions)
     data = []
     begin = 0
-    block_size = nx / nb_partitions
+    block_size = int(nx / nb_partitions)
     for ip in range(nb_partitions):
         end = min(begin + block_size + 1, nx - 1)
         data.append((ip, begin, end, img_buf))
