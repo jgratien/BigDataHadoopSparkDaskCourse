@@ -21,7 +21,7 @@ def part_median_filter(local_data):
     new_buf = np.array([end-first-1, ny-2], dtype='uint8')
     
     # TODO COMPUTE MEDIAN FILTER
-    for i in range(begin+1, end):
+    for i in range(first+1, end):
         for j in range(1, ny-1):
             median = np.median(
                 (buf[i-1,j-1], buf[i-1,j], buf[i-1,j+1],
@@ -29,7 +29,7 @@ def part_median_filter(local_data):
                 buf[i+1,j-1], buf[i+1,j], buf[i+1,j+1]),
                 axis=0)
             imedian = np.array([int(k) for k in median])
-            new_buf[i-begin-1,j-1] = imedian
+            new_buf[i-first-1,j-1] = imedian
     
     # RETURN LOCAL IMAGE PART
     return part_id, new_buf
