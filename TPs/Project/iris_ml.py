@@ -5,7 +5,7 @@ from pyspark import SparkConf,      \
 from pyspark.sql import SQLContext, Row
 from pyspark.ml import Pipeline
 from pyspark.ml.linalg import Vectors
-from pyspark.ml.feature import StringIndexer
+from pyspark.ml.feature import StringIndexer, StandardScaler
 from pyspark.ml.classification import DecisionTreeClassifier,   \
                                       LogisticRegression,   \
                                       NaiveBayes
@@ -43,29 +43,35 @@ iris_lp = sqlContext.createDataFrame(
 # Add a numeric indexer for the label/target column
 labelIndexer = StringIndexer(inputCol="species", outputCol="label")
 
+# Add a gaussian-normalizor for features set
+scaler = StandardScaler(
+    inputCol="features",
+    outputCol="scaled",
+    withStd=True, withMean=True)
+
 # Split into training and testing data
 (trainingData, testData) = iris_lp.randomSplit([0.75, 0.25])
 
 # Create the models
 dtClass     = DecisionTreeClassifier(
     labelCol="label",
-    featuresCol="features",
+    featuresCol="scaled",
     maxDepth=5)
 nvbClass    = NaiveBayes(
     labelCol="label",
-    featuresCol="features",
+    featuresCol="scaled",
     smoothing=0.5,
     modelType="gaussian")
 lrClass     = LogisticRegression(
     labelCol="label",
-    featuresCol="features",
+    featuresCol="scaled",
     maxIter=15)
 
 # ML-Pipelines
 print("Creating training pipelines...")
-dtPipe  = Pipeline(stages=[labelIndexer, dtClass])
-nvbPipe = Pipeline(stages=[labelIndexer, nvbClass])
-lrPipe  = Pipeline(stages=[labelIndexer, lrClass])
+dtPipe  = Pipeline(stages=[labelIndexer, scaler, dtClass])
+nvbPipe = Pipeline(stages=[labelIndexer, scaler, nvbClass])
+lrPipe  = Pipeline(stages=[labelIndexer, scaler, lrClass])
 
 # Models objects output
 print("Fitting pipelines...")
