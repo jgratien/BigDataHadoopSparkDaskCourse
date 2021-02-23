@@ -35,6 +35,10 @@ def part_median_filter(local_data):
     return part_id, new_buf
 
 def main():
+    # CREATE SPARKCONTEXT
+    sc = SparkContext()
+    sc.setLogLevel("ERROR")
+
     data_dir = '/gext/rami.kader/hpcai/HPDA/BigDataHadoopSparkDaskCourse/TPs/data'
     file = os.path.join(data_dir, 'lena_noisy.jpg')
     img_buf = readImg(file)
@@ -54,12 +58,9 @@ def main():
         data.append((ip, begin, end, img_buf))
         begin = end - 1
 
-    # CREATE SPARKCONTEXT
-    sc = SparkContext()
-    sc.setLogLevel("ERROR")
-    data_rdd = sc.parallelize(data, nb_partitions)	
     
     # PARALLEL MEDIAN FILTER COMPUTATION
+    data_rdd = sc.parallelize(data, nb_partitions)	
     result_rdd = data_rdd.map(part_median_filter)
     result_data = result_rdd.collect()
 
