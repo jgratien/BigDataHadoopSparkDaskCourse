@@ -43,7 +43,6 @@ def main():
     file = os.path.join(data_dir, 'lena_noisy.jpg')
     img_buf = readImg(file)
     print('SHAPE', img_buf.shape)
-    print('IMG\n', img_buf)
     nx = img_buf.shape[0]
     ny = img_buf.shape[1]
     
@@ -53,11 +52,13 @@ def main():
     data = []
     begin = 0
     block_size = int(nx / nb_partitions)
+    rest = nx % nb_partitions
     for ip in range(nb_partitions):
-        end = min(begin + block_size + 1, nx - 1)
+        end = min(
+            begin + block_size + 1 + (1 if r > 0 and ip < (nb_partitions-1) else 0),
+            nx - 1)
         data.append((ip, begin, end, img_buf))
         begin = end - 1
-
     
     # PARALLEL MEDIAN FILTER COMPUTATION
     data_rdd = sc.parallelize(data, nb_partitions)	
