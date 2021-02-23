@@ -51,14 +51,13 @@ def main():
     print("NB PARTITIONS : ", nb_partitions)
     data = []
     begin = 0
-    block_size = int(nx / nb_partitions)
     rest = nx % nb_partitions
     for ip in range(nb_partitions):
-        end = min(
-            begin + block_size + 1 + (1 if r > 0 and ip < (nb_partitions-1) else 0),
-            nx - 1)
+        block_size = int(nx / nb_partitions) + (1 if rest > 0 and ip < rest else 0)
+        end = min(begin + block_size + 1, nx - 1)
         data.append((ip, begin, end, img_buf))
         begin = end - 1
+
     
     # PARALLEL MEDIAN FILTER COMPUTATION
     data_rdd = sc.parallelize(data, nb_partitions)	
