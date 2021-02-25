@@ -1,5 +1,9 @@
 import pyspark
-sc = pyspark.SparkContext('local[*]')
+try :
+    sc.close()
+except:
+    None
+sc = pyspark.SparkContext()
 
 txt = sc.textFile('README.md')
 print(txt.count())
