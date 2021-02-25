@@ -47,6 +47,8 @@ def main():
     ny = img_buf.shape[1]
     
     # SPLT IMAGES IN NB_PARTITIONS PARTS
+    # Taking GHOST CELLS for each partition
+    # being the boundaries of the corresponding division
     nb_partitions = 8
     print("NB PARTITIONS : ", nb_partitions)
     data = []
