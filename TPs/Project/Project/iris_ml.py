@@ -1,96 +1,71 @@
-import pyspark
-from pyspark import SparkContext
-from pyspark.sql import Row
-from pyspark.sql import SQLContext
-from pyspark import SparkFiles
+from pandas import read_csv
+from pyspark import SparkConf,      \
+                    SparkContext,   \
+                    SparkFiles
+from pyspark.sql import SQLContext, Row
+from pyspark.ml import Pipeline
+from pyspark.ml.linalg import Vectors
+from pyspark.ml.feature import StringIndexer,   \
+                               VectorAssembler, \
+                               StandardScaler
+from pyspark.ml.classification import DecisionTreeClassifier,   \
+                                      LogisticRegression,   \
+                                      RandomForestClassifier 
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 import os
 import pandas as pd
 
-"""----------------------------------------------------------------------------
-CREATE SPARK CONTEXT
-CREATE SQL CONTEXT
-----------------------------------------------------------------------------"""
-sc =SparkContext()
+sc = SparkContext()
 sqlContext = SQLContext(sc)
 
-"""----------------------------------------------------------------------------
-LOAD IRIS DATA
-----------------------------------------------------------------------------"""
-data_dir="/gext/jean-marc.gratien/BigDataHadoopSpark/TPs/data"
-file = os.path.join(data_dir,"iris.csv")
-panda_df = pd.read_csv(file)
+pandas_data = pd.read_csv("iris.csv")
+data = sqlContext.createDataFrame(pandas_data)
+print("Original Data's Schema /n")
+data.printSchema()
 
-iris_df=sqlContext.createDataFrame(panda_df)
-iris_df.printSchema()
+train, test = data.randomSplit([0.8, 0.2])
 
-#Add a numeric indexer for the label/target column
-from pyspark.ml.feature import StringIndexer
-stringIndexer = StringIndexer(inputCol="variety", outputCol="ind_variety")
-si_model = stringIndexer.fit(iris_df)
-irisNormDf = si_model.transform(iris_df)
-irisNormDf.printSchema()
-irisNormDf.select("variety","ind_variety").distinct().collect()
-#irisNormDf.cache()
-
-"""--------------------------------------------------------------------------
-Perform Data Analytics
--------------------------------------------------------------------------"""
-
-#See standard parameters
-#irisNormDf.describe().show()
+stringIndexer = StringIndexer(inputCol="variety", outputCol="num_variety")
+indexed = stringIndexer.fit(data).transform(data)
 
 
-"""--------------------------------------------------------------------------
-Prepare data for ML
--------------------------------------------------------------------------"""
+vectorAssembler = VectorAssembler(inputCols=["sepal_length", "sepal_width", "petal_length", "petal_width"],\
+                                  outputCol="features")
+assembled = vectorAssembler.transform(indexed)
+assembled = assembled.drop('sepal_length', 'sepal_width', 'petal_length', 'petal_width')
 
-#Transform to a Data Frame for input to Machine Learing
-#Drop columns that are not required (low correlation)
+##Displaying the effect of preprocessing to understand how spark deals with data
 
-from pyspark.ml.linalg import Vectors
-def transformToLabeledPoint(row) :
-    lp = ( row["variety"], row["ind_variety"], \
-                Vectors.dense([row["sepal_length"],\
-                        row["sepal_width"], \
-                        row["petal_length"], \
-                        row["petal_width"]]))
-    return lp
+print("Data's Schema after PreProcessing Phase")
+assembled.show()
 
-irisLp = irisNormDf.rdd.map(transformToLabeledPoint)
-irisLpDf = sqlContext.createDataFrame(irisLp,["species","label", "features"])
-irisLpDf.select("species","label","features").show(50)
-irisLpDf.cache()
+DT_clf = DecisionTreeClassifier(labelCol="num_variety", featuresCol="features", maxDepth=10, maxBins=32)
 
-"""--------------------------------------------------------------------------
-Perform Machine Learning
--------------------------------------------------------------------------"""
+LR_clf = LogisticRegression( labelCol="num_variety", featuresCol="features",maxIter=20, regParam=0.8)
 
-#Split into training and testing data
-(trainingData, testData) = irisLpDf.randomSplit([0.9, 0.1])
-trainingData.count()
-testData.count()
-testData.collect()
+RF_clf = RandomForestClassifier(labelCol="num_variety", featuresCol="features", maxDepth=6, numTrees=50)
 
-from pyspark.ml.classification import DecisionTreeClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+models = [DT_clf, LR_clf, RF_clf]
 
-#Create the model
-dtClassifer = DecisionTreeClassifier(maxDepth=4, labelCol="label",\
-                featuresCol="features")
-dtModel = dtClassifer.fit(trainingData)
+evaluator = MulticlassClassificationEvaluator(labelCol="num_variety", predictionCol="prediction", metricName="accuracy")
 
-print(dtModel.numNodes)
-print(dtModel.depth)
+names = ["Decision Trees", "Logistic Regression", "Random Forests"]
+i=0
+for mod in models:
 
-#Predict on the test data
-predictions = dtModel.transform(testData)
-predictions.select("prediction","species","label").collect()
+  pipe = Pipeline(stages=[stringIndexer, vectorAssembler, mod])
+  model = pipe.fit(train)
 
-#Evaluate accuracy
-evaluator = MulticlassClassificationEvaluator(predictionCol="prediction", \
-                    labelCol="label",metricName="accuracy")
-evaluator.evaluate(predictions)    
+  # obtain predictions.
+  pred = model.transform(test)
 
-#Draw a confusion matrix
-predictions.groupBy("label","prediction").count().show()
+  # Columns to display for evaluation
+  pred.select("prediction", "num_variety", "features").show(20)
+  
+  # Accuracy for comparison between models
+  accuracy = evaluator.evaluate(pred)
+
+  print(names[i])
+  i+=1
+  print("Test accuracy = ", accuracy*100, "%\n")
 
