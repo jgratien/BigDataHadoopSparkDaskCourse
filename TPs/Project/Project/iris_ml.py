@@ -1,8 +1,8 @@
 # Importing relevant libraries
 import pandas as pd
 
-from pyspark import SparkConf, SparkContext,  SparkFiles
-from pyspark.sql import SQLContext, Row
+from pyspark import SparkConf, SparkContext
+from pyspark.sql import SQLContext
 
 from pyspark.ml import Pipeline
 from pyspark.ml.linalg import Vectors
