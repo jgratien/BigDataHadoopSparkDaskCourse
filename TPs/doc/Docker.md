@@ -53,6 +53,7 @@ $ sudo apt-get update
 $ sudo apt-get install docker-ce docker-ce-cli containerd.io
 
 $ sudo apt install docker-compose
+```
 
 - Test installation
 
@@ -78,7 +79,7 @@ $ sudo systemctl enable docker.service
 $ sudo systemctl enable containerd.service
 ```
 
-Disable docker service
+- Disable docker service
 
 ```bash
 $ sudo systemctl disable docker.service
@@ -87,14 +88,16 @@ $  sudo systemctl disable containerd.service
 
 - Configure remote acces
 
-First dolution : Editing the systemctl docker.service config file
+--First solution : Editing the systemctl docker.service config file
 
 ```bash
-# edit the following file
-# /lib/systemd/system/docker.service
-# ...
+
+$ sudo vi /lib/systemd/system/docker.service
+#
+# modify the following
 ExecStart=/usr/bin/dockerd -H fd:// -H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock
 # ...
+
 ```
 
 Reload the systemctl configuration than restart docker service
@@ -107,7 +110,7 @@ $ sudo systemctl restart docker.service
 $ sudo netstat -lntp | grep dockerd
 ```
 
-Second solution (cannot be used with first solution because of conflicts)
+--Second solution (cannot be used with first solution because of conflicts)
 
 Set the hosts array in the /etc/docker/daemon.json to connect to the UNIX socket and an IP address, as follows:
 
@@ -129,6 +132,47 @@ $ sudo systemctl restart docker.service
 
 # CHECK MODIFICATIONS
 $ sudo netstat -lntp | grep dockerd
+```
+
+
+- Secure the daemon remote acces with tls : https://docs.docker.com/engine/security/protect-access/}
+
+Generate tls keys for the server and for the client with the following procedure:
+
+Let HOST be the dns name of the docker remote server with IP :10.10.10.20
+
+```bash
+
+$ openssl genrsa -aes256 -out ca-key.pem 4096
+$ openssl req -new -x509 -days 365 -key ca-key.pem -sha256 -out ca.pem
+$ openssl genrsa -out server-key.pem 4096
+$ openssl req -subj "/CN=$HOST" -sha256 -new -key server-key.pem -out server.csr
+$ echo subjectAltName = DNS:$HOST,IP:10.10.10.20,IP:127.0.0.1 >> extfile.cnf
+$ echo extendedKeyUsage = serverAuth >> extfile.cnf
+$ openssl x509 -req -days 365 -sha256 -in server.csr -CA ca.pem -CAkey ca-key.pem \
+  -CAcreateserial -out server-cert.pem -extfile extfile.cnf
+$ openssl genrsa -out key.pem 4096
+$ echo extendedKeyUsage = clientAuth > extfile-client.cnf
+$ openssl x509 -req -days 365 -sha256 -in client.csr -CA ca.pem -CAkey ca-key.pem \
+  -CAcreateserial -out cert.pem -extfile extfile-client.cnf
+$ chmod -v 0400 ca-key.pem key.pem server-key.pem
+$ chmod -v 0444 ca.pem server-cert.pem cert.pem
+$ cp ca.pem server-cert.pem server-key.pem /etc/docker/var/.
+```
+
+Add the following options to the docker.service configuration
+
+```bash
+--tlsverify \
+--tlscacert=/etc/docker/var/ca.pem \
+--tlscert=/etc/docker/var/server-cert.pem \
+--tlskey=/etc/docker/var/server-key.pem 
+```
+
+In the client side put the client key files in the $HOME/.docker directory:
+
+```bash
+cp ca.perm cert.perm and key.perm $HOME/.docker
 ```
 
 ## II/ Main commands
