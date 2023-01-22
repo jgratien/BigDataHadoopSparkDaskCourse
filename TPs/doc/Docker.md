@@ -250,7 +250,7 @@ cd ubuntu/tag2 ; docker build -t myusername/myappli:tag2 .
 ```
 
 ```bash
-docker run -d -rm -v $PWD:/data -w /data \
+docker run -d --rm -v $PWD:/data -w /data \
                   -p 8888:8000 myusername/myappli:tag0 \
                   ./script-run.sh
 ```

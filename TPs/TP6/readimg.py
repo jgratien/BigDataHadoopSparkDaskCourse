@@ -10,7 +10,7 @@ def writeImg(path,buf):
     imageio.imwrite(path,buf)
 
 def main():
-    data_dir = '/work/irlin355_1/gratienj/ParallelProgrammingCourse/BigDataHadoopSpark/TPs/data'
+    data_dir = '/work/gratienj/ParallelProgrammingCourse/BigDataHadoopSpark/TPs/data'
     filename = os.path.join(data_dir,'lena_noisy.jpg')
     print('PATH',filename)
     img_buf=readImg(filename)
