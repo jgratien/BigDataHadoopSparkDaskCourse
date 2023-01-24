@@ -1,0 +1,9 @@
+KAFKA_BIN=/usr/hdp/current/kafka-broker/bin
+KAFKA_CONSUMER=${KAFKA_BIN}/kafka-console-consumer.sh
+KAFKA_PRODUCER=${KAFKA_BIN}/kafka-console-producer.sh
+KAFKA_TOPICS=${KAFKA_BIN}/kafka-topics.sh
+KAFKA_ACLS=${KAFKA_BIN}/kafka-acls.sh
+KAFKA_BROKER=islin-hdplnod06.ifp.fr:6667
+ZK_SERVER=islin-hdplnod06.ifp.fr:2181
+export KAFKA_OPTS="-Djava.security.auth.login.config=kafka_client_jaas_shortrun.conf -Djava.security.debug=configfile"
+#export KAFKA_OPTS="-Djava.security.auth.login.config=kafka_client_jaas_longrun.conf"
