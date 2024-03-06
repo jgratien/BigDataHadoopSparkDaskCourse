@@ -238,6 +238,7 @@ $ docker cp foo.txt container_id:/foo.txt
 ```bash
 docker container run -ti --rm -v $PWD:/data -w /data \
     my-apply/version:tag ./script-run.sh
+    
 ```
 
 
@@ -247,6 +248,7 @@ docker container run -ti --rm -v $PWD:/data -w /data \
 cd ubuntu/tag0 ; docker build --build-arg http_proxy=http://irproxy:8082 -t myusername/myappli:tag0 .
 cd ubuntu/tag1 ; docker build -t myusername/myappli:tag1 .
 cd ubuntu/tag2 ; docker build -t myusername/myappli:tag2 .
+
 ```
 
 ```bash
